@@ -1,0 +1,139 @@
+package com.oieliseiev.gpstracking.bot;
+
+import com.oieliseiev.gpstracking.model.GpsDevice;
+import com.oieliseiev.gpstracking.service.DeviceService;
+import com.oieliseiev.gpstracking.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ForceReplyKeyboard;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
+import org.telegram.telegrambots.meta.updateshandlers.SentCallback;
+
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Logger;
+
+@Component
+public class TelegramBot extends TelegramLongPollingBot {
+
+    private static final Logger LOGGER = Logger.getLogger(TelegramBot.class.getName());
+
+    @Value("${bot.username}")
+    private String botUserName;
+
+    @Value("${bot.token}")
+    private String botToken;
+
+    @Autowired
+    private TelegramBotService telegramBotService;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private DeviceService deviceService;
+
+    @Override
+    public void onUpdateReceived(Update update) {
+        if (update.hasMessage()) {
+            handleMessage(update.getMessage());
+        } else if (update.hasCallbackQuery()) {
+            handleCallbackQuery(update.getCallbackQuery());
+        } else {
+            LOGGER.warning("Message handler is skipped." + update);
+        }
+    }
+
+
+    private void handleMessage(Message message) {
+        if (message != null && message.hasText()) {
+            userService.initializeUser(message.getFrom(), message.getChatId());
+            String msg = message.getText();
+            LOGGER.info("Message: " + msg);
+            if (msg.startsWith(Commands.LIST_DEVICES)) {
+                handleListDevices(message);
+            } else if (msg.startsWith(Commands.ADD_NEW_DEVICE)) {
+                handleAddNewDevice(message);
+            }
+        }
+    }
+
+    private void handleListDevices(Message message) {
+        List<GpsDevice> devices = deviceService.getUserDevices(message.getFrom().getId(), message.getChatId());
+        if (devices.isEmpty()) {
+            Map<String, String> buttons = new HashMap<>();
+            buttons.put("Add new GPS device", Commands.ADD_NEW_DEVICE);
+            sendBotApiMessage(telegramBotService.getKeyBoardMarkup(message, "You have no GPS devices. You can add new device: ", buttons));
+        } else {
+            Map<String, String> buttons = new HashMap<>();
+            devices.forEach(d -> {
+                buttons.put(d.getImei(), Commands.SELECT_DEVICE + ":" + d.getId());
+            });
+            sendBotApiMessage(telegramBotService.getKeyBoardMarkup(message, "You can activate single device: ", buttons));
+        }
+    }
+
+    private void handleAddNewDevice(Message message) {
+        SendMessage sendMessageRequest = new SendMessage();
+        sendMessageRequest.setChatId(message.getChatId());
+        sendMessageRequest.setReplyToMessageId(message.getMessageId());
+        ForceReplyKeyboard forceReplyKeyboard = new ForceReplyKeyboard();
+        forceReplyKeyboard.setSelective(true);
+        sendMessageRequest.setReplyMarkup(forceReplyKeyboard);
+        sendMessageRequest.setText("Please enter GPS device imei: ");
+        try {
+            executeAsync(sendMessageRequest, new SentCallback<Message>() {
+                @Override
+                public void onResult(BotApiMethod<Message> method, Message sentMessage) {
+                    if (sentMessage != null) {
+
+                    }
+                }
+
+                @Override
+                public void onError(BotApiMethod<Message> botApiMethod, TelegramApiRequestException e) {
+                    LOGGER.severe(e.getMessage());
+                }
+
+                @Override
+                public void onException(BotApiMethod<Message> botApiMethod, Exception e) {
+                    LOGGER.severe(e.getMessage());
+                }
+            });
+        } catch (TelegramApiException e) {
+            LOGGER.severe(e.getMessage());
+        }
+    }
+
+    private void handleCallbackQuery(CallbackQuery callbackQuery) {
+
+    }
+
+    private void sendBotApiMessage(BotApiMethod<? extends Serializable> botApiMethod) {
+        try {
+            execute(botApiMethod);
+        } catch (TelegramApiException e) {
+            LOGGER.severe(e.getMessage());
+        }
+    }
+
+    @Override
+    public String getBotUsername() {
+        return botUserName;
+    }
+
+    @Override
+    public String getBotToken() {
+        return botToken;
+    }
+}
