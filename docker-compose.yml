@@ -1,0 +1,45 @@
+version: '3.3'
+services:
+  db:
+    container_name: db
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'gps_tracking'
+      # Password for root access
+      MYSQL_ROOT_PASSWORD: '29031989'
+    ports:
+      # <Port exposed> : < MySQL Port running inside container>
+      - '3306:3306'
+#    expose:
+#      # Opens port 3306 on the container
+#      - '3306'
+      # Where our data will be persisted
+    volumes:
+      - my-db:/var/lib/mysql
+    networks:
+      - backend
+
+  gps_tracking:
+    depends_on:
+      - db
+    environment: # Pass environment variables to the service
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/gps_tracking
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 29031989
+    restart: always
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    image: gps_tracking
+    ports:
+      - 8080
+    networks:
+      - backend
+
+# Names our volume
+volumes:
+  my-db:
+
+networks:
+  backend:

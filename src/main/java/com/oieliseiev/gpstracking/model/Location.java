@@ -11,5 +11,4 @@ public class Location {
     private Float longitude;
     private LocalDateTime date;
     private Integer gpsDeviceId;
-    private Integer userId;
 }

@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS tbl_user (
     lastActiveDate TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS tbl_gpsDevice(
+CREATE TABLE IF NOT EXISTS tbl_gpsdevice(
     id INT AUTO_INCREMENT PRIMARY KEY,
     imei VARCHAR(255) NOT NULL,
     isActive BOOLEAN default false,
@@ -18,6 +18,5 @@ CREATE TABLE IF NOT EXISTS tbl_location(
     latitude FLOAT,
     longitude FLOAT,
     date TIMESTAMP,
-    gpsDeviceId INT REFERENCES tbl_gpsDevice(id),
-    userId INT REFERENCES tbl_user(userId)
+    gpsDeviceId INT REFERENCES tbl_gpsDevice(id)
 );

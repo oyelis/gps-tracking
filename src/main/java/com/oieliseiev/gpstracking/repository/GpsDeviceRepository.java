@@ -7,4 +7,6 @@ import java.util.List;
 public interface GpsDeviceRepository {
 
     List<GpsDevice> getUserDevices(Integer userId, Long chatId);
+
+    boolean save(String imei, Integer userId);
 }

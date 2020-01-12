@@ -12,10 +12,7 @@ import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Logger;
 
 @Service
@@ -44,17 +41,29 @@ public class TelegramBotService {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
         sendMessage.setText(markupMsg);
-        List<InlineKeyboardButton> buttons = new ArrayList<>();
-        List<List<InlineKeyboardButton>> keyboardButtons = Collections.singletonList(buttons);
-        callbackButtons.forEach((b, c) -> {
-            InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
-            inlineKeyboardButton.setText(b).setCallbackData(c);
-            buttons.add(inlineKeyboardButton);
-        });
+        List<List<InlineKeyboardButton>> keyboardButtons = new ArrayList<>();
+        Set<String> names = callbackButtons.keySet();
+        Iterator<String> iterator = names.iterator();
+        while (iterator.hasNext()) {
+            List<InlineKeyboardButton> buttons = new ArrayList<>();
+            String name1 = iterator.next();
+            addButton(name1, callbackButtons.get(name1), buttons);
+            if (iterator.hasNext()) {
+                String name2 = iterator.next();
+                addButton(name2, callbackButtons.get(name2), buttons);
+            }
+            keyboardButtons.add(buttons);
+        }
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         inlineKeyboardMarkup.setKeyboard(keyboardButtons);
         sendMessage.setReplyMarkup(inlineKeyboardMarkup);
         return sendMessage;
+    }
+
+    private void addButton(String name, String callback, List<InlineKeyboardButton> buttons) {
+        InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton(name);
+        inlineKeyboardButton.setCallbackData(callback);
+        buttons.add(inlineKeyboardButton);
     }
 
     public SendChatAction getChatAction(Message message, ActionType actionType) {

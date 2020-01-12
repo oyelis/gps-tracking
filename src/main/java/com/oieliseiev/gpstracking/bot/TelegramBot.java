@@ -60,11 +60,31 @@ public class TelegramBot extends TelegramLongPollingBot {
             userService.initializeUser(message.getFrom(), message.getChatId());
             String msg = message.getText();
             LOGGER.info("Message: " + msg);
-            if (msg.startsWith(Commands.LIST_DEVICES)) {
-                handleListDevices(message);
-            } else if (msg.startsWith(Commands.ADD_NEW_DEVICE)) {
-                handleAddNewDevice(message);
+            if (message.isReply()) {
+                handleReplyMessage(message);
+            } else {
+                handleCommand(message, Command.getCommand(msg));
             }
+        }
+    }
+
+    private void handleReplyMessage(Message message) {
+        deviceService.saveDevice(message.getText(), message.getFrom().getId());
+    }
+
+    private void handleCommand(Message message, Command command) {
+        switch (command) {
+            case LIST_DEVICES:
+                handleListDevices(message);
+                break;
+            case ADD_NEW_DEVICE:
+                handleAddNewDevice(message);
+                break;
+            case NONE:
+            default:
+                Map<String, String> buttons = new HashMap<>();
+                Command.getCommands().forEach(v -> buttons.put(v.getName(), v.getValue()));
+                sendBotApiMessage(telegramBotService.getKeyBoardMarkup(message, "Please select option: ", buttons));
         }
     }
 
@@ -72,13 +92,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<GpsDevice> devices = deviceService.getUserDevices(message.getFrom().getId(), message.getChatId());
         if (devices.isEmpty()) {
             Map<String, String> buttons = new HashMap<>();
-            buttons.put("Add new GPS device", Commands.ADD_NEW_DEVICE);
+            buttons.put("Add new GPS device", Command.ADD_NEW_DEVICE.getValue());
             sendBotApiMessage(telegramBotService.getKeyBoardMarkup(message, "You have no GPS devices. You can add new device: ", buttons));
         } else {
             Map<String, String> buttons = new HashMap<>();
-            devices.forEach(d -> {
-                buttons.put(d.getImei(), Commands.SELECT_DEVICE + ":" + d.getId());
-            });
+            devices.forEach(d -> buttons.put(d.getImei(), Command.SELECT_DEVICE.getValue() + ":" + d.getId()));
             sendBotApiMessage(telegramBotService.getKeyBoardMarkup(message, "You can activate single device: ", buttons));
         }
     }
@@ -96,7 +114,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                 @Override
                 public void onResult(BotApiMethod<Message> method, Message sentMessage) {
                     if (sentMessage != null) {
-
                     }
                 }
 
@@ -116,7 +133,14 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void handleCallbackQuery(CallbackQuery callbackQuery) {
-
+        Message message = callbackQuery.getMessage();
+        if (message != null && message.hasText()) {
+            userService.initializeUser(message.getFrom(), message.getChatId());
+            String data = callbackQuery.getData();
+            LOGGER.info("CallbackQuery: " + data);
+            Command command = Command.getCommand(data);
+            handleCommand(message, command);
+        }
     }
 
     private void sendBotApiMessage(BotApiMethod<? extends Serializable> botApiMethod) {

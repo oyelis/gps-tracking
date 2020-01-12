@@ -16,4 +16,8 @@ public class DeviceService {
     public List<GpsDevice> getUserDevices(Integer userId, Long chatId) {
         return gpsDeviceRepository.getUserDevices(userId, chatId);
     }
+
+    public boolean saveDevice(String imei, Integer userId) {
+        return gpsDeviceRepository.save(imei, userId);
+    }
 }
