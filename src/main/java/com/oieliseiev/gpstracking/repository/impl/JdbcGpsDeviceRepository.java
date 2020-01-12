@@ -13,6 +13,7 @@ import java.util.List;
 public class JdbcGpsDeviceRepository implements GpsDeviceRepository {
 
     private static final String SELECT_DEVICES = "SELECT * FROM tbl_gpsdevice WHERE userId = :userId";
+    private static final String SELECT_COUNT_DEVICES = "SELECT COUNT(*) FROM tbl_gpsdevice WHERE imei = :imei";
     private static final String INSERT_DEVICE = "INSERT INTO tbl_gpsdevice(imei, userId) VALUES (:imei, :userId)";
 
 
@@ -20,7 +21,7 @@ public class JdbcGpsDeviceRepository implements GpsDeviceRepository {
     private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     @Override
-    public List<GpsDevice> getUserDevices(Integer userId, Long chatId) {
+    public List<GpsDevice> getUserDevices(Integer userId) {
         return namedParameterJdbcTemplate.query(SELECT_DEVICES, new MapSqlParameterSource("userId", userId),
                 (rs, i) -> GpsDevice.builder()
                         .id(rs.getInt("id"))
@@ -36,5 +37,11 @@ public class JdbcGpsDeviceRepository implements GpsDeviceRepository {
         mapSqlParameterSource.addValue("imei", imei);
         mapSqlParameterSource.addValue("userId", userId);
         return namedParameterJdbcTemplate.update(INSERT_DEVICE, mapSqlParameterSource) > 0;
+    }
+
+    @Override
+    public boolean deviceExists(String imei) {
+        Integer count = namedParameterJdbcTemplate.queryForObject(SELECT_COUNT_DEVICES, new MapSqlParameterSource("imei", imei), Integer.class);
+        return count != null && count > 0;
     }
 }

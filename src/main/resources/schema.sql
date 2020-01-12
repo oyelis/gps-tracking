@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS tbl_user (
 
 CREATE TABLE IF NOT EXISTS tbl_gpsdevice(
     id INT AUTO_INCREMENT PRIMARY KEY,
-    imei VARCHAR(255) NOT NULL,
+    imei VARCHAR(255) NOT NULL UNIQUE,
     isActive BOOLEAN default false,
     userId INT REFERENCES tbl_user(userId)
 );

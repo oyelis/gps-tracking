@@ -19,6 +19,7 @@ import org.telegram.telegrambots.meta.updateshandlers.SentCallback;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -69,7 +70,18 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void handleReplyMessage(Message message) {
-        deviceService.saveDevice(message.getText(), message.getFrom().getId());
+        String resultMessage = "No action";
+        try {
+            if (Action.getAction(message.getReplyToMessage().getText()) == Action.ENTER_DEVICE_IMEI) {
+                resultMessage = deviceService.saveDevice(message.getText(), message.getFrom().getId()) ? "GPS device successfully added." : "GPS device already added.";
+            }
+        } catch (Exception e) {
+            resultMessage = e.getMessage();
+        }
+        SendMessage response = new SendMessage();
+        response.setChatId(message.getChatId());
+        response.setText(resultMessage);
+        sendBotApiMessage(response);
     }
 
     private void handleCommand(Message message, Command command) {
@@ -82,8 +94,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                 break;
             case NONE:
             default:
-                Map<String, String> buttons = new HashMap<>();
-                Command.getCommands().forEach(v -> buttons.put(v.getName(), v.getValue()));
+                Map<String, String> buttons = new LinkedHashMap<>();
+                Command.getMainMenuCommands().forEach(v -> buttons.put(v.getName(), v.getValue()));
                 sendBotApiMessage(telegramBotService.getKeyBoardMarkup(message, "Please select option: ", buttons));
         }
     }
@@ -108,13 +120,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         ForceReplyKeyboard forceReplyKeyboard = new ForceReplyKeyboard();
         forceReplyKeyboard.setSelective(true);
         sendMessageRequest.setReplyMarkup(forceReplyKeyboard);
-        sendMessageRequest.setText("Please enter GPS device imei: ");
+        sendMessageRequest.setText(Action.ENTER_DEVICE_IMEI.getMessage());
         try {
             executeAsync(sendMessageRequest, new SentCallback<Message>() {
                 @Override
                 public void onResult(BotApiMethod<Message> method, Message sentMessage) {
-                    if (sentMessage != null) {
-                    }
                 }
 
                 @Override
